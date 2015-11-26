@@ -1,0 +1,220 @@
+﻿@{
+    ViewBag.Title = "Search CV";
+}
+
+<div class="pageheader" style="padding:65px;">
+    <div class="panel panel-default">
+        <div class="panel-heading" style="background: none repeat scroll 0 0 #eff2f7;">
+            <h4 class="panel-title">Search CV</h4>
+            <br/>
+            <input type="hidden" id="txtWhatid" />
+            What: <input type="text" id="txtWhat" />
+            <input type="hidden" id="txtWhereid" />
+            Where: <input type="text" id="txtWhere" />
+            <input type="submit" value="Search" id="submit" />
+            <div class="actions pull-right">
+                <i class="fa fa-expand"></i>
+                <i class="fa fa-chevron-down"></i>
+                <i class="fa fa-times"></i>
+            </div>
+        </div>
+        <div class="panel-body" style="background: none repeat scroll 0 0 #eff2f7;">
+            <table id="example" class="table table-striped table-bordered" cellspacing="0" width="100%"></table>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+
+    <div class="col-md-12">
+        
+    </div>
+
+</div>
+
+
+@section Styles {
+    @Styles.Render("~/plugins/dataTablesCSS")
+}
+
+<!--Load these page level functions-->
+@section Scripts {
+    @Scripts.Render("~/plugins/dataTables")
+    @Scripts.Render("~/plugins/dataTables-bootstrap")
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />
+    <script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('#example').dataTable();
+        });
+    </script>
+    <script type="text/javascript">
+
+        // Search Skill autocomplete
+        $('#txtWhat').autocomplete({
+            source: function (request, response) {
+                $.ajax({
+                    url: "/Tables/GetDesignation",
+                    data: { term: $("#txtWhat").val() },
+                    dataType: 'json',
+                    type: 'GET',
+                    success: function (data) {
+                        response($.map(data,
+                    function (item) {
+                        return {
+                            label: item.user_job_title,
+                            value1: item.user_exp_id
+                        }
+                    }));
+                    }
+                })
+            },
+            select:
+    function (event, ui) {
+        $('#txtWhat').val(ui.item.label);
+        $('#txtWhatid').val(ui.item.value1);
+        return false;
+    },
+            minLength: 1
+        });
+
+
+        // Search Address autocomplete
+        $('#txtWhere').autocomplete({
+            source: function (request, response) {
+                $.ajax({
+                    url: "/Tables/Autocomplete",
+                    data: { term: $("#txtWhere").val() },
+                    dataType: 'json',
+                    type: 'GET',
+                    success: function (data) {
+                        response($.map(data,
+                    function (item) {
+                        return {
+                            label: item.user_dist,
+                            value1: item.user_address_id
+                        }
+                    }));
+                    }
+                })
+            },
+            select:
+    function (event, ui) {
+        $('#txtWhere').val(ui.item.label);
+        $('#txtWhereid').val(ui.item.value1);
+        return false;
+    },
+            minLength: 1
+        });
+
+        var responseData;
+        $('#submit').click(function () {
+
+            var a = document.getElementById("txtWhat").value;
+            $("#sidebar-leftAreas ul ").empty();
+            $("#sidebar-leftSkilled ul ").empty();
+            $.ajax({
+                type: "GET",
+                contentType: "application/json; charset=utf-8",
+                url: "/Tables/GetFindResult",
+                data: { what: $("#txtWhat").val(), where: $("#txtWhere").val() },
+                dataType: "json",
+                success: function (data) {
+                    responseData = data;
+                    var val = 0;
+                    $.each(data, function (index, value) {
+                        val++;
+                    });
+
+                    var strTable = '';
+                    var Pagelink = '';
+                    var PageSize = 10;
+                    var PageIndex = 0;
+                    var ProductIdList = val;
+                    if (document.getElementById('ddlPageSize')) {
+                        PageSize = document.getElementById('ddlPageSize').value;
+                        PageIndex = document.getElementById('ddlPageSize').selectedIndex;
+                    }
+                    for (var pageCount = 1 ; pageCount <= Math.ceil(ProductIdList / PageSize) ; pageCount++) {
+                        Pagelink = Pagelink + '<a  href=javascript:void(0) onclick=javacsript:PageIndexChanging(' + (pageCount - 1) + '); id=a_' + pageCount + '> ' + (pageCount) + '</a>'
+                    }
+                    $("#example").empty();
+                    $("#example").append("<tr><th style='width:26%;'> Select Page Size: <select id=ddlPageSize onchange=PageIndexChanging(0)>  <option value=10>10</option>  <option value=20>20</option>  <option value=30>30</option>  <option value=40>40</option> <option value=50>50</option> </select></span></th><th style='width:24%;'></th><th  style='width:24%;' id=td_PageLink " + Pagelink + "></th><th  style='width:13%;' id=td_pageNo> Page 1 of " + Math.ceil(ProductIdList / PageSize) + "</th><th style='width:13%;'></th></tr>");
+
+                    $("#example").append("<tr><th>NAME " + "<span style='color:limegreen;'>(" + val + ")</span></th><th>LATEST EXPERIENCE</th><th>COMPANY</th><th>LOCATION</th><th></th></tr>");
+
+                    $.each(data, function (index, value) {
+                        if (index < PageSize)
+                            PageShowHide = 'style=display:'
+                        else
+                            PageShowHide = 'style=display:none'
+                        var onMouseIndex = index + 2;
+                        var JobTitle = value.user_job_title
+                        var Company = value.user_company_name
+                        var an = "<div id=\"divName2\"><a href=\"value='" + value.user_full_name + "'\">" + value.user_full_name + " </a></div>";
+                        var at = "<div id=\"divJobTitle2\">" + JobTitle + "</div>";
+                        var ac = "<div id=\"divJobCompany2\">" + Company + "</div>";
+                        var row = "<tr  id=trSelect" + index + " " + PageShowHide + "><td>" + an + "</td> <td>" + JobTitle + "</td> <td>" + Company + "</td> <td>" + value.user_area + "</td> <td> " + value.user_dist + "</td> </tr>";
+                        $('#example').append(row);
+
+                        $("#sidebar-leftAreas ul ").append("<li><a href=/user/messages><span class='tab'>" + value.user_area + "</span></a></li>");
+                        $("#sidebar-leftSkilled ul ").append("<li><a href=/user/messages><span class='tab'>" + value.user_skill + "</span></a></li>");
+                        
+
+                    });
+                    //alert("page after----");
+                    $('#example').dataTable();
+                    $('#sidebar-left').show();
+
+                },
+                error: function (result) {
+                    alert('error' + result);
+                }
+            });
+
+        });
+
+
+        var arrArea = new Array[""];
+        function isInArray(value) {
+            var value = arrArea.indexOf(value);
+            return value;
+            }              // Function returns the product of a and b
+    
+
+
+        function PageIndexChanging(PageNo) {
+            //alert("Pageno----" + PageNo);
+            if (PageNo > 0) {
+                var PageSize = 10;
+                var val = 0;
+                $.each(responseData, function (index, value) {
+                    val++;
+                });
+                if (document.getElementById('ddlPageSize'))
+                    PageSize = document.getElementById('ddlPageSize').value;
+                $.each(responseData, function (i, value) {
+
+                    if (i >= (PageNo * PageSize) && i < (PageNo + 1) * PageSize) {
+                        document.getElementById('trSelect' + i).style.display = '';
+                    }
+                    else {
+                        document.getElementById('trSelect' + i).style.display = 'none';
+                    }
+                });
+                var Pagelink = '';
+
+                for (var pageCount = 1 ; pageCount <= Math.ceil(val / PageSize) ; pageCount++) {
+                    Pagelink = Pagelink + '<a  href=javascript:void(0) onclick=javacsript:PageIndexChanging(' + (pageCount - 1) + '); id=a_' + pageCount + '> ' + (pageCount) + '</a>'
+                }
+                //alert("in fn");
+                document.getElementById('td_PageLink').innerHTML = Pagelink;
+                document.getElementById('td_pageNo').innerHTML = 'Page ' + (PageNo + 1) + ' of ' + Math.ceil(val / PageSize);
+            }
+            
+
+        }
+    </script>
+    <table id="myData"></table>
+}
